@@ -1,7 +1,8 @@
-import sys
 import asyncio
-import edge_tts
 import random
+import sys
+
+import edge_tts
 
 voices = [
     'en-US-AmberNeural',
@@ -18,10 +19,10 @@ voices = [
 
 async def generate_tts(text, output_path, max_retries=3):
     selected_voice = random.choice(voices)
-    communicate = edge_tts.Communicate(text, voice=selected_voice)
     retries = 0
     while retries < max_retries:
         try:
+            communicate = edge_tts.Communicate(text, voice=selected_voice)
             await communicate.save(output_path)
             print(f"Audio saved to {output_path} using voice {selected_voice}")
             return
@@ -35,7 +36,8 @@ async def generate_tts(text, output_path, max_retries=3):
     print(f"Failed to generate audio after {max_retries} attempts.")
 
 if __name__ == "__main__":
-    # Get text and output path from command-line arguments
+    if len(sys.argv) != 3:
+        raise SystemExit("Usage: python generate_tts.py <text> <output-path>")
     text = sys.argv[1]
     output_path = sys.argv[2]
     asyncio.run(generate_tts(text, output_path))

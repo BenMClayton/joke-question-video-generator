@@ -1,6 +1,6 @@
-// app.js
+require('dotenv').config();
 
-const { exec } = require('child_process');
+const { spawn } = require('child_process');
 const axios = require('axios');
 const fs = require('fs-extra');
 const path = require('path');
@@ -8,15 +8,15 @@ const ffmpeg = require('fluent-ffmpeg');
 
 async function generateSpeechWithPython(text, outputPath) {
 	return new Promise((resolve, reject) => {
-		const command = `py generate_tts.py "${text}" "${outputPath}"`;
-		exec(command, (error, stdout, stderr) => {
-			if (error) {
-				console.error('Error generating speech with Python:', stderr);
-				reject(error);
-			} else {
-				console.log(stdout);
-				resolve();
-			}
+		const python = process.env.PYTHON_COMMAND || (process.platform === 'win32' ? 'py' : 'python3');
+		const child = spawn(python, ['generate_tts.py', text, outputPath], {
+			cwd: __dirname,
+			stdio: 'inherit',
+		});
+		child.once('error', reject);
+		child.once('exit', code => {
+			if (code === 0) resolve();
+			else reject(new Error(`Text-to-speech process exited with code ${code}`));
 		});
 	});
 }
@@ -32,7 +32,10 @@ function extractKeywords(text) {
 }
 
 async function fetchVideoClips(query, count) {
-	const apiKey = 'REVOKED_PEXELS_API_KEY'; // Replace with your actual Pexels API key
+	const apiKey = process.env.PEXELS_API_KEY;
+	if (!apiKey) {
+		throw new Error('PEXELS_API_KEY is required. Copy .env.example to .env and add your key.');
+	}
 	const keywords = extractKeywords(query);
 	const url = `https://api.pexels.com/videos/search?query=${encodeURIComponent(keywords)}&per_page=${count}&orientation=portrait`;
 
@@ -192,7 +195,10 @@ async function createVideoWithAudioAndSubtitles(questionVideoPaths, answerVideoP
 			filterComplexParts.push(`${scaledVideoLabels.join('')}concat=n=${totalVideos}:v=1:a=0 [v_concat]`);
 			filterComplexParts.push(`${audioInputs.join('')}concat=n=${audioInputs.length}:v=0:a=1 [a_concat]`);
 
-			const fontPath = escapeFFmpegPath('C:/Windows/Fonts/Arial.ttf'); // Adjust the font path as needed
+			const defaultFont = process.platform === 'win32'
+				? 'C:/Windows/Fonts/Arial.ttf'
+				: '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf';
+			const fontPath = escapeFFmpegPath(process.env.FFMPEG_FONT_FILE || defaultFont);
 
 			let lastVideoLabel = '[v_concat]';
 			subtitles.forEach((subtitle, index) => {

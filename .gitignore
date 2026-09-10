@@ -1,0 +1,11 @@
+node_modules/
+.env
+.venv/
+__pycache__/
+*.py[cod]
+
+# Downloaded/generated media
+*_video*.mp4
+question.mp3
+answer*.mp3
+dynamic_video.mp4
